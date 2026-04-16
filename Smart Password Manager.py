@@ -1,19 +1,24 @@
-# 🔐 Smart Password Manager v2
-# simple CLI app to store and manage passwords
-# built while learning python (and trying not to forget my own passwords 😅)
+# 🔐 Smart Password Manager v3
+# safer, cleaner, and more "real-world ready"
 
 import json
 import os
+import hashlib
 from getpass import getpass
 
 DATA_FILE = "data.json"
-MASTER_PASSWORD = "1234"  # TODO: replace this with something secure later
+MASTER_HASH = hashlib.sha256("1234".encode()).hexdigest()  # change this!
 
 
-# ---------- basic file handling ----------
+# ---------- utils ----------
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+# ---------- file handling ----------
 
 def load_data():
-    """Load saved passwords from file (if it exists)."""
     if not os.path.exists(DATA_FILE):
         return []
 
@@ -21,12 +26,11 @@ def load_data():
         with open(DATA_FILE, "r") as f:
             return json.load(f)
     except json.JSONDecodeError:
-        print("⚠️ Data file is corrupted. Starting fresh.")
+        print("⚠️ Data corrupted. Starting fresh.")
         return []
 
 
 def save_data(data):
-    """Save passwords to file."""
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
@@ -34,11 +38,10 @@ def save_data(data):
 # ---------- authentication ----------
 
 def login():
-    """Simple login system using master password."""
     print("\n🔐 Login Required")
     password = getpass("Enter master password: ")
 
-    if password == MASTER_PASSWORD:
+    if hash_password(password) == MASTER_HASH:
         print("✅ Access granted\n")
         return True
 
@@ -49,7 +52,6 @@ def login():
 # ---------- core features ----------
 
 def add_password(data):
-    """Add a new password entry."""
     print("\n➕ Add New Password")
 
     site = input("Website: ").strip()
@@ -67,44 +69,46 @@ def add_password(data):
     })
 
     save_data(data)
-    print("✅ Password saved successfully!")
+    print("✅ Saved!")
 
 
 def view_passwords(data):
-    """Display all saved passwords."""
     print("\n📂 Saved Passwords")
 
     if not data:
-        print("No passwords saved yet.")
+        print("No passwords yet.")
         return
+
+    show = input("Show passwords? (y/n): ").lower()
 
     for i, entry in enumerate(data, start=1):
         print(f"\n[{i}] {entry['site']}")
         print(f"   Username: {entry['username']}")
-        print(f"   Password: {entry['password']}")
+
+        if show == "y":
+            print(f"   Password: {entry['password']}")
+        else:
+            print("   Password: ******")
 
 
 def search_password(data):
-    """Search for a password by website name."""
-    print("\n🔍 Search Passwords")
+    print("\n🔍 Search")
 
-    keyword = input("Enter website name: ").lower().strip()
+    keyword = input("Enter site: ").lower().strip()
 
-    results = [entry for entry in data if keyword in entry['site'].lower()]
+    results = [e for e in data if keyword in e['site'].lower()]
 
     if not results:
-        print("❌ No results found.")
+        print("❌ No results.")
         return
 
-    print(f"\nFound {len(results)} result(s):")
     for entry in results:
-        print(f"\nSite: {entry['site']}")
-        print(f"Username: {entry['username']}")
-        print(f"Password: {entry['password']}")
+        print(f"\n🌐 {entry['site']}")
+        print(f"👤 {entry['username']}")
+        print(f"🔑 {entry['password']}")
 
 
 def delete_password(data):
-    """Delete a password entry by index."""
     view_passwords(data)
 
     if not data:
@@ -112,23 +116,20 @@ def delete_password(data):
 
     try:
         choice = int(input("\nEnter number to delete: "))
-        if choice < 1 or choice > len(data):
-            print("⚠️ Invalid number.")
-            return
-
-        removed = data.pop(choice - 1)
-        save_data(data)
-
-        print(f"🗑️ Deleted: {removed['site']}")
-
+        if 1 <= choice <= len(data):
+            removed = data.pop(choice - 1)
+            save_data(data)
+            print(f"🗑️ Deleted {removed['site']}")
+        else:
+            print("⚠️ Invalid choice.")
     except ValueError:
-        print("⚠️ Please enter a valid number.")
+        print("⚠️ Enter a number.")
 
 
-# ---------- main app loop ----------
+# ---------- main ----------
 
 def main():
-    print("🧠 Smart Password Manager v2")
+    print("🧠 Smart Password Manager v3")
 
     if not login():
         return
@@ -144,7 +145,7 @@ def main():
 5. Exit
 """)
 
-        choice = input("Choose an option: ").strip()
+        choice = input("Choose: ").strip()
 
         if choice == "1":
             add_password(data)
@@ -155,10 +156,10 @@ def main():
         elif choice == "4":
             delete_password(data)
         elif choice == "5":
-            print("👋 Exiting... stay safe.")
+            print("👋 Bye, stay safe.")
             break
         else:
-            print("⚠️ Invalid option. Try again.")
+            print("⚠️ Invalid option.")
 
 
 if __name__ == "__main__":
