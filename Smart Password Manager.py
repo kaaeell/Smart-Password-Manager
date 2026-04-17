@@ -1,5 +1,4 @@
-# 🔐 Smart Password Manager v3
-# safer, cleaner, and more "real-world ready"
+# 🔐 Smart Password Manager v4
 
 import json
 import os
@@ -7,13 +6,48 @@ import hashlib
 from getpass import getpass
 
 DATA_FILE = "data.json"
-MASTER_HASH = hashlib.sha256("1234".encode()).hexdigest()  # change this!
+MASTER_FILE = "master.hash"
 
 
 # ---------- utils ----------
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
+
+
+# ---------- master password setup ----------
+
+def setup_master_password():
+    print("🔐 No master password found. Let's create one.")
+    while True:
+        password = getpass("Create master password: ")
+        confirm = getpass("Confirm password: ")
+
+        if password == confirm:
+            with open(MASTER_FILE, "w") as f:
+                f.write(hash_password(password))
+            print("✅ Master password set!\n")
+            break
+        else:
+            print("❌ Passwords do not match. Try again.")
+
+
+def verify_master_password():
+    if not os.path.exists(MASTER_FILE):
+        setup_master_password()
+
+    with open(MASTER_FILE, "r") as f:
+        stored_hash = f.read()
+
+    print("\n🔐 Login Required")
+    password = getpass("Enter master password: ")
+
+    if hash_password(password) == stored_hash:
+        print("✅ Access granted\n")
+        return True
+
+    print("❌ Wrong password")
+    return False
 
 
 # ---------- file handling ----------
@@ -35,20 +69,6 @@ def save_data(data):
         json.dump(data, f, indent=4)
 
 
-# ---------- authentication ----------
-
-def login():
-    print("\n🔐 Login Required")
-    password = getpass("Enter master password: ")
-
-    if hash_password(password) == MASTER_HASH:
-        print("✅ Access granted\n")
-        return True
-
-    print("❌ Wrong password")
-    return False
-
-
 # ---------- core features ----------
 
 def add_password(data):
@@ -65,7 +85,7 @@ def add_password(data):
     data.append({
         "site": site,
         "username": username,
-        "password": password
+        "password": password  # still plain (see v5 idea below)
     })
 
     save_data(data)
@@ -129,9 +149,9 @@ def delete_password(data):
 # ---------- main ----------
 
 def main():
-    print("🧠 Smart Password Manager v3")
+    print("🧠 Smart Password Manager v4")
 
-    if not login():
+    if not verify_master_password():
         return
 
     data = load_data()
