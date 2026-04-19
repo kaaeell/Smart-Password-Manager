@@ -19,6 +19,7 @@ def generate_key():
     key = Fernet.generate_key()
     with open(KEY_FILE, "wb") as f:
         f.write(key)
+    print("⚠️ New encryption key generated. Keep it safe!")
 
 
 def load_key():
@@ -32,7 +33,10 @@ def encrypt_password(password, key):
 
 
 def decrypt_password(encrypted_password, key):
-    return Fernet(key).decrypt(encrypted_password.encode()).decode()
+    try:
+        return Fernet(key).decrypt(encrypted_password.encode()).decode()
+    except:
+        return "⚠️ Decryption failed"
 
 
 # ---------- master password ----------
@@ -151,6 +155,38 @@ def search_password(data, key):
         print(f"🔑 {decrypted}")
 
 
+def update_password(data, key):
+    print("\n✏️ Update Password")
+
+    if not data:
+        print("No entries available.")
+        return
+
+    for i, entry in enumerate(data, start=1):
+        print(f"[{i}] {entry['site']}")
+
+    try:
+        choice = int(input("Select entry: "))
+        if 1 <= choice <= len(data):
+            entry = data[choice - 1]
+
+            new_username = input("New username (leave blank to keep): ").strip()
+            new_password = getpass("New password (leave blank to keep): ").strip()
+
+            if new_username:
+                entry["username"] = new_username
+
+            if new_password:
+                entry["password"] = encrypt_password(new_password, key)
+
+            save_data(data)
+            print("✅ Updated successfully")
+        else:
+            print("⚠️ Invalid choice.")
+    except:
+        print("⚠️ Enter a valid number.")
+
+
 def delete_password(data):
     if not data:
         print("No passwords to delete.")
@@ -171,10 +207,23 @@ def delete_password(data):
         print("⚠️ Enter a valid number.")
 
 
+def export_backup(data, key):
+    print("\n💾 Export Backup (DECRYPTED)")
+
+    filename = "backup.txt"
+
+    with open(filename, "w") as f:
+        for entry in data:
+            password = decrypt_password(entry["password"], key)
+            f.write(f"{entry['site']} | {entry['username']} | {password}\n")
+
+    print(f"✅ Backup saved to {filename}")
+
+
 # ---------- main ----------
 
 def main():
-    print("🧠 Smart Password Manager v5")
+    print("🧠 Smart Password Manager v6")
 
     if not verify_master_password():
         return
@@ -187,8 +236,10 @@ def main():
 1. Add Password
 2. View Passwords
 3. Search
-4. Delete
-5. Exit
+4. Update
+5. Delete
+6. Export Backup
+7. Exit
 """)
 
         choice = input("Choose: ").strip()
@@ -200,8 +251,12 @@ def main():
         elif choice == "3":
             search_password(data, key)
         elif choice == "4":
-            delete_password(data)
+            update_password(data, key)
         elif choice == "5":
+            delete_password(data)
+        elif choice == "6":
+            export_backup(data, key)
+        elif choice == "7":
             print("👋 Bye, stay safe.")
             break
         else:
