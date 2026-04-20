@@ -9,8 +9,6 @@ MASTER_FILE = "master.hash"
 KEY_FILE = "secret.key"
 
 
-# ---------- security utils ----------
-
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -38,8 +36,6 @@ def decrypt_password(encrypted_password, key):
     except:
         return "⚠️ Decryption failed"
 
-
-# ---------- master password ----------
 
 def setup_master_password():
     print("🔐 No master password found. Let's create one.")
@@ -74,8 +70,6 @@ def verify_master_password():
     return False
 
 
-# ---------- file handling ----------
-
 def load_data():
     if not os.path.exists(DATA_FILE):
         return []
@@ -92,8 +86,6 @@ def save_data(data):
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
-
-# ---------- features ----------
 
 def add_password(data, key):
     print("\n➕ Add New Password")
@@ -220,10 +212,8 @@ def export_backup(data, key):
     print(f"✅ Backup saved to {filename}")
 
 
-# ---------- main ----------
-
 def main():
-    print("🧠 Smart Password Manager v6")
+    print("🧠 Smart Password Manager")
 
     if not verify_master_password():
         return
