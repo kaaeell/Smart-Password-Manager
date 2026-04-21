@@ -1,6 +1,8 @@
 import json
 import os
 import hashlib
+import random
+import string
 from getpass import getpass
 from cryptography.fernet import Fernet
 
@@ -87,12 +89,28 @@ def save_data(data):
         json.dump(data, f, indent=4)
 
 
+def generate_password():
+    """Generate a random password"""
+    length = 12
+    chars = string.ascii_letters + string.digits + "!@#$%"
+    password = ''.join(random.choice(chars) for i in range(length))
+    return password
+
+
 def add_password(data, key):
     print("\n➕ Add New Password")
 
     site = input("Website: ").strip()
     username = input("Username: ").strip()
-    password = getpass("Password: ").strip()
+    
+    # Ask if they want a random password
+    random_pw = input("Generate random password? (y/n): ").lower()
+    
+    if random_pw == "y":
+        password = generate_password()
+        print(f"Generated password: {password}")
+    else:
+        password = getpass("Password: ").strip()
 
     if not site or not username or not password:
         print("⚠️ All fields required.")
@@ -133,7 +151,7 @@ def view_passwords(data, key):
 def search_password(data, key):
     print("\n🔍 Search")
 
-    keyword = input("Enter site: ").lower().strip()
+    keyword = input("Enter site name: ").lower().strip()
     results = [e for e in data if keyword in e['site'].lower()]
 
     if not results:
@@ -163,7 +181,15 @@ def update_password(data, key):
             entry = data[choice - 1]
 
             new_username = input("New username (leave blank to keep): ").strip()
-            new_password = getpass("New password (leave blank to keep): ").strip()
+            
+            # Ask if they want a random password
+            random_pw = input("Generate random password? (y/n): ").lower()
+            
+            if random_pw == "y":
+                new_password = generate_password()
+                print(f"Generated password: {new_password}")
+            else:
+                new_password = getpass("New password (leave blank to keep): ").strip()
 
             if new_username:
                 entry["username"] = new_username
@@ -200,9 +226,11 @@ def delete_password(data):
 
 
 def export_backup(data, key):
-    print("\n💾 Export Backup (DECRYPTED)")
+    print("\n💾 Export Backup")
 
-    filename = "backup.txt"
+    filename = input("Filename (default: backup.txt): ").strip()
+    if not filename:
+        filename = "backup.txt"
 
     with open(filename, "w") as f:
         for entry in data:
