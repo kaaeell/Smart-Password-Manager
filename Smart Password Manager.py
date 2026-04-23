@@ -17,7 +17,6 @@ def generate_key():
     key = Fernet.generate_key()
     with open(KEY_FILE, "wb") as f:
         f.write(key)
-    print("⚠️ New encryption key generated. Keep it safe!")
 
 def load_key():
     if not os.path.exists(KEY_FILE):
@@ -32,24 +31,24 @@ def decrypt_password(encrypted_password, key):
     try:
         return Fernet(key).decrypt(encrypted_password.encode()).decode()
     except:
-        return "⚠️ Decryption failed - key may be corrupted"
+        return "[DECRYPTION FAILED]"
 
 def setup_master_password():
-    print("🔐 No master password found. Let's create one.")
+    print("No master password found. Let's create one.")
     while True:
         password = getpass("Create master password: ")
         confirm = getpass("Confirm password: ")
         
         if password == confirm:
             if not password:
-                print("❌ Password cannot be empty.")
+                print("Password cannot be empty.")
                 continue
             with open(MASTER_FILE, "w") as f:
                 f.write(hash_password(password))
-            print("✅ Master password set!\n")
+            print("Master password set!\n")
             break
         else:
-            print("❌ Passwords do not match.")
+            print("Passwords do not match.")
 
 def verify_master_password():
     if not os.path.exists(MASTER_FILE):
@@ -60,18 +59,18 @@ def verify_master_password():
     
     attempts = 3
     for attempt in range(attempts):
-        print("\n🔐 Login Required")
+        print("\nLogin Required")
         password = getpass("Enter master password: ")
         
         if hash_password(password) == stored_hash:
-            print("✅ Access granted\n")
+            print("Access granted\n")
             return True
         else:
             remaining = attempts - attempt - 1
             if remaining > 0:
-                print(f"❌ Wrong password. {remaining} attempts remaining.")
+                print(f"Wrong password. {remaining} attempts remaining.")
             else:
-                print("❌ Too many failed attempts.")
+                print("Too many failed attempts.")
     
     return False
 
@@ -86,7 +85,7 @@ def load_data():
                 return []
             return json.loads(content)
     except (json.JSONDecodeError, IOError):
-        print("⚠️ Data file corrupted. Starting fresh.")
+        print("Data file corrupted. Starting fresh.")
         return []
 
 def save_data(data):
@@ -95,7 +94,7 @@ def save_data(data):
             json.dump(data, f, indent=4)
         return True
     except IOError:
-        print("❌ Failed to save data.")
+        print("Failed to save data.")
         return False
 
 def generate_password(length=12):
@@ -103,16 +102,16 @@ def generate_password(length=12):
     return ''.join(random.choice(chars) for _ in range(length))
 
 def add_password(data, key):
-    print("\n➕ Add New Password")
+    print("\nAdd New Password")
     
     site = input("Website: ").strip()
     if not site:
-        print("⚠️ Website name required.")
+        print("Website name required.")
         return
     
     username = input("Username: ").strip()
     if not username:
-        print("⚠️ Username required.")
+        print("Username required.")
         return
     
     random_pw = input("Generate random password? (y/n): ").lower()
@@ -122,19 +121,19 @@ def add_password(data, key):
         print(f"Generated password: {password}")
         confirm = input("Save this password? (y/n): ").lower()
         if confirm != "y":
-            print("❌ Cancelled.")
+            print("Cancelled.")
             return
     else:
         password = getpass("Password: ").strip()
         if not password:
-            print("⚠️ Password cannot be empty.")
+            print("Password cannot be empty.")
             return
     
     encrypted = encrypt_password(password, key)
     
     for entry in data:
         if entry["site"].lower() == site.lower() and entry["username"].lower() == username.lower():
-            print("⚠️ Entry already exists for this site and username.")
+            print("Entry already exists for this site and username.")
             return
     
     data.append({
@@ -144,10 +143,10 @@ def add_password(data, key):
     })
     
     if save_data(data):
-        print("✅ Saved securely!")
+        print("Saved!")
 
 def view_passwords(data, key):
-    print("\n📂 Saved Passwords")
+    print("\nSaved Passwords")
     
     if not data:
         print("No passwords yet.")
@@ -166,27 +165,27 @@ def view_passwords(data, key):
             print("   Password: ********")
 
 def search_password(data, key):
-    print("\n🔍 Search")
+    print("\nSearch")
     
     keyword = input("Enter site name: ").lower().strip()
     if not keyword:
-        print("❌ No search term provided.")
+        print("No search term provided.")
         return
     
     results = [e for e in data if keyword in e['site'].lower()]
     
     if not results:
-        print("❌ No results found.")
+        print("No results found.")
         return
     
     for entry in results:
         decrypted = decrypt_password(entry["password"], key)
-        print(f"\n🌐 {entry['site']}")
-        print(f"👤 {entry['username']}")
-        print(f"🔑 {decrypted}")
+        print(f"\n{entry['site']}")
+        print(f"   Username: {entry['username']}")
+        print(f"   Password: {decrypted}")
 
 def update_password(data, key):
-    print("\n✏️ Update Password")
+    print("\nUpdate Password")
     
     if not data:
         print("No entries available.")
@@ -212,7 +211,7 @@ def update_password(data, key):
                 confirm = input("Save this password? (y/n): ").lower()
                 if confirm == "y":
                     entry["password"] = encrypt_password(new_password, key)
-                    print("✅ Password updated")
+                    print("Password updated")
                 else:
                     print("Password unchanged.")
             else:
@@ -221,14 +220,14 @@ def update_password(data, key):
                     entry["password"] = encrypt_password(new_password, key)
             
             if save_data(data):
-                print("✅ Updated successfully")
+                print("Updated successfully")
         else:
-            print("⚠️ Invalid choice.")
+            print("Invalid choice.")
     except ValueError:
-        print("⚠️ Please enter a valid number.")
+        print("Please enter a valid number.")
 
 def delete_password(data):
-    print("\n🗑️ Delete Password")
+    print("\nDelete Password")
     
     if not data:
         print("No passwords to delete.")
@@ -244,16 +243,16 @@ def delete_password(data):
             if confirm == "y":
                 removed = data.pop(choice - 1)
                 if save_data(data):
-                    print(f"🗑️ Deleted {removed['site']}")
+                    print(f"Deleted {removed['site']}")
             else:
                 print("Cancelled.")
         else:
-            print("⚠️ Invalid choice.")
+            print("Invalid choice.")
     except ValueError:
-        print("⚠️ Please enter a valid number.")
+        print("Please enter a valid number.")
 
 def export_backup(data, key):
-    print("\n💾 Export Backup")
+    print("\nExport Backup")
     
     if not data:
         print("No data to export.")
@@ -272,17 +271,17 @@ def export_backup(data, key):
             f.write("-" * 50 + "\n")
             for entry in data:
                 password = decrypt_password(entry["password"], key)
-                if "⚠️" not in password:
+                if "[DECRYPTION FAILED]" not in password:
                     f.write(f"{entry['site']} | {entry['username']} | {password}\n")
                 else:
                     f.write(f"{entry['site']} | {entry['username']} | [DECRYPTION FAILED]\n")
         
-        print(f"✅ Backup saved to {filename}")
+        print(f"Backup saved to {filename}")
     except IOError:
-        print("❌ Failed to create backup.")
+        print("Failed to create backup.")
 
 def main():
-    print("🧠 Smart Password Manager")
+    print("Password Manager")
     
     if not verify_master_password():
         print("Access denied. Exiting.")
@@ -317,10 +316,10 @@ def main():
         elif choice == "6":
             export_backup(data, key)
         elif choice == "7":
-            print("👋 Goodbye! Stay safe.")
+            print("Goodbye!")
             break
         else:
-            print("⚠️ Invalid option. Please choose 1-7.")
+            print("Invalid option. Please choose 1-7.")
 
 if __name__ == "__main__":
     main()
