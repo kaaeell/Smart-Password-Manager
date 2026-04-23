@@ -6,6 +6,8 @@ import string
 from getpass import getpass
 from cryptography.fernet import Fernet
 
+#making this while learning python stuff btw :)#
+
 DATA_FILE = "data.json"
 MASTER_FILE = "master.hash"
 KEY_FILE = "secret.key"
