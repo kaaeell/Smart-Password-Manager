@@ -6,19 +6,21 @@ import string
 from getpass import getpass
 from cryptography.fernet import Fernet
 
-#making this while learning python stuff btw :)#
 
 DATA_FILE = "data.json"
 MASTER_FILE = "master.hash"
 KEY_FILE = "secret.key"
 
+
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
+
 
 def generate_key():
     key = Fernet.generate_key()
     with open(KEY_FILE, "wb") as f:
         f.write(key)
+
 
 def load_key():
     if not os.path.exists(KEY_FILE):
@@ -26,14 +28,17 @@ def load_key():
     with open(KEY_FILE, "rb") as f:
         return f.read()
 
+
 def encrypt_password(password, key):
     return Fernet(key).encrypt(password.encode()).decode()
+
 
 def decrypt_password(encrypted_password, key):
     try:
         return Fernet(key).decrypt(encrypted_password.encode()).decode()
     except:
         return "[DECRYPTION FAILED]"
+
 
 def setup_master_password():
     print("No master password found. Let's create one.")
@@ -51,6 +56,7 @@ def setup_master_password():
             break
         else:
             print("Passwords do not match.")
+
 
 def verify_master_password():
     if not os.path.exists(MASTER_FILE):
@@ -76,6 +82,7 @@ def verify_master_password():
     
     return False
 
+
 def load_data():
     if not os.path.exists(DATA_FILE):
         return []
@@ -90,6 +97,7 @@ def load_data():
         print("Data file corrupted. Starting fresh.")
         return []
 
+
 def save_data(data):
     try:
         with open(DATA_FILE, "w") as f:
@@ -99,9 +107,11 @@ def save_data(data):
         print("Failed to save data.")
         return False
 
+
 def generate_password(length=12):
     chars = string.ascii_letters + string.digits + "!@#$%"
     return ''.join(random.choice(chars) for _ in range(length))
+
 
 def add_password(data, key):
     print("\nAdd New Password")
@@ -147,6 +157,7 @@ def add_password(data, key):
     if save_data(data):
         print("Saved!")
 
+
 def view_passwords(data, key):
     print("\nSaved Passwords")
     
@@ -165,6 +176,7 @@ def view_passwords(data, key):
             print(f"   Password: {decrypted}")
         else:
             print("   Password: ********")
+
 
 def search_password(data, key):
     print("\nSearch")
@@ -185,6 +197,7 @@ def search_password(data, key):
         print(f"\n{entry['site']}")
         print(f"   Username: {entry['username']}")
         print(f"   Password: {decrypted}")
+
 
 def update_password(data, key):
     print("\nUpdate Password")
@@ -228,6 +241,7 @@ def update_password(data, key):
     except ValueError:
         print("Please enter a valid number.")
 
+
 def delete_password(data):
     print("\nDelete Password")
     
@@ -252,6 +266,7 @@ def delete_password(data):
             print("Invalid choice.")
     except ValueError:
         print("Please enter a valid number.")
+
 
 def export_backup(data, key):
     print("\nExport Backup")
@@ -281,6 +296,7 @@ def export_backup(data, key):
         print(f"Backup saved to {filename}")
     except IOError:
         print("Failed to create backup.")
+
 
 def main():
     print("Password Manager")
@@ -322,6 +338,7 @@ def main():
             break
         else:
             print("Invalid option. Please choose 1-7.")
+
 
 if __name__ == "__main__":
     main()
