@@ -6,21 +6,17 @@ import string
 from getpass import getpass
 from cryptography.fernet import Fernet
 
-
 DATA_FILE = "data.json"
 MASTER_FILE = "master.hash"
 KEY_FILE = "secret.key"
 
-
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
-
 
 def generate_key():
     key = Fernet.generate_key()
     with open(KEY_FILE, "wb") as f:
         f.write(key)
-
 
 def load_key():
     if not os.path.exists(KEY_FILE):
@@ -28,17 +24,14 @@ def load_key():
     with open(KEY_FILE, "rb") as f:
         return f.read()
 
-
 def encrypt_password(password, key):
     return Fernet(key).encrypt(password.encode()).decode()
-
 
 def decrypt_password(encrypted_password, key):
     try:
         return Fernet(key).decrypt(encrypted_password.encode()).decode()
     except:
         return "[DECRYPTION FAILED]"
-
 
 def setup_master_password():
     print("No master password found. Let's create one.")
@@ -56,7 +49,6 @@ def setup_master_password():
             break
         else:
             print("Passwords do not match.")
-
 
 def verify_master_password():
     if not os.path.exists(MASTER_FILE):
@@ -82,7 +74,6 @@ def verify_master_password():
     
     return False
 
-
 def load_data():
     if not os.path.exists(DATA_FILE):
         return []
@@ -97,7 +88,6 @@ def load_data():
         print("Data file corrupted. Starting fresh.")
         return []
 
-
 def save_data(data):
     try:
         with open(DATA_FILE, "w") as f:
@@ -107,11 +97,9 @@ def save_data(data):
         print("Failed to save data.")
         return False
 
-
 def generate_password(length=12):
     chars = string.ascii_letters + string.digits + "!@#$%"
     return ''.join(random.choice(chars) for _ in range(length))
-
 
 def add_password(data, key):
     print("\nAdd New Password")
@@ -157,7 +145,6 @@ def add_password(data, key):
     if save_data(data):
         print("Saved!")
 
-
 def view_passwords(data, key):
     print("\nSaved Passwords")
     
@@ -176,7 +163,6 @@ def view_passwords(data, key):
             print(f"   Password: {decrypted}")
         else:
             print("   Password: ********")
-
 
 def search_password(data, key):
     print("\nSearch")
@@ -197,7 +183,6 @@ def search_password(data, key):
         print(f"\n{entry['site']}")
         print(f"   Username: {entry['username']}")
         print(f"   Password: {decrypted}")
-
 
 def update_password(data, key):
     print("\nUpdate Password")
@@ -241,7 +226,6 @@ def update_password(data, key):
     except ValueError:
         print("Please enter a valid number.")
 
-
 def delete_password(data):
     print("\nDelete Password")
     
@@ -266,7 +250,6 @@ def delete_password(data):
             print("Invalid choice.")
     except ValueError:
         print("Please enter a valid number.")
-
 
 def export_backup(data, key):
     print("\nExport Backup")
@@ -297,6 +280,71 @@ def export_backup(data, key):
     except IOError:
         print("Failed to create backup.")
 
+def import_backup(data, key):
+    print("\nImport Backup")
+    
+    filename = input("Enter backup filename: ").strip()
+    if not filename:
+        print("No filename provided.")
+        return
+    
+    if not os.path.exists(filename):
+        print("File not found.")
+        return
+    
+    try:
+        with open(filename, "r") as f:
+            lines = f.readlines()
+        
+        imported = 0
+        for line in lines[2:]:
+            if "|" in line and "[DECRYPTION FAILED]" not in line:
+                parts = line.strip().split(" | ")
+                if len(parts) == 3:
+                    site, username, password = parts
+                    
+                    exists = False
+                    for entry in data:
+                        if entry["site"].lower() == site.lower() and entry["username"].lower() == username.lower():
+                            exists = True
+                            break
+                    
+                    if not exists:
+                        encrypted = encrypt_password(password, key)
+                        data.append({
+                            "site": site,
+                            "username": username,
+                            "password": encrypted
+                        })
+                        imported += 1
+        
+        if imported > 0 and save_data(data):
+            print(f"Imported {imported} entries.")
+        else:
+            print("No new entries imported.")
+    except Exception as e:
+        print(f"Import failed: {e}")
+
+def change_master_password():
+    print("\nChange Master Password")
+    
+    if not verify_master_password():
+        return False
+    
+    while True:
+        new_pass = getpass("New master password: ")
+        confirm = getpass("Confirm new password: ")
+        
+        if new_pass == confirm:
+            if not new_pass:
+                print("Password cannot be empty.")
+                continue
+            with open(MASTER_FILE, "w") as f:
+                f.write(hash_password(new_pass))
+            print("Master password changed successfully!")
+            return True
+        else:
+            print("Passwords do not match.")
 
 def main():
     print("Password Manager")
@@ -316,10 +364,12 @@ def main():
         print("4. Update")
         print("5. Delete")
         print("6. Export Backup")
-        print("7. Exit")
+        print("7. Import Backup")
+        print("8. Change Master Password")
+        print("9. Exit")
         print("="*30)
         
-        choice = input("Choose (1-7): ").strip()
+        choice = input("Choose (1-9): ").strip()
         
         if choice == "1":
             add_password(data, key)
@@ -334,11 +384,14 @@ def main():
         elif choice == "6":
             export_backup(data, key)
         elif choice == "7":
+            import_backup(data, key)
+        elif choice == "8":
+            change_master_password()
+        elif choice == "9":
             print("Goodbye!")
             break
         else:
-            print("Invalid option. Please choose 1-7.")
-
+            print("Invalid option. Please choose 1-9.")
 
 if __name__ == "__main__":
     main()
