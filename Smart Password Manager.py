@@ -9,17 +9,17 @@ from datetime import datetime
 from getpass import getpass
 from cryptography.fernet import Fernet
 
-# File paths
-DATA_FILE = "data.json"
-MASTER_FILE = "master.hash"
-KEY_FILE = "secret.key"
+# File paths - where we store everything
+DATA_FILE = "data.json"           # Stores all your passwords (encrypted)
+MASTER_FILE = "master.hash"       # Stores your master password hash
+KEY_FILE = "secret.key"           # Stores encryption key (KEEP THIS SAFE!)
 
 def clear_screen():
-    """Clear terminal screen (works on Windows/Mac/Linux)"""
+    """Clears terminal screen - works on Windows, Mac, and Linux"""
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def print_header(title):
-    """Print a nice formatted header"""
+    """Prints a nice formatted header for better UI"""
     clear_screen()
     print("=" * 50)
     print(f"🔐 PASSWORD MANAGER - {title}")
@@ -27,39 +27,40 @@ def print_header(title):
     print()
 
 def hash_password(password):
-    """Hash a password using SHA-256"""
+    """Convert password to hash using SHA-256 (can't be reversed!)"""
     return hashlib.sha256(password.encode()).hexdigest()
 
 def generate_key():
-    """Generate a new encryption key"""
+    """Creates a new encryption key for securing passwords"""
     key = Fernet.generate_key()
     with open(KEY_FILE, "wb") as f:
         f.write(key)
-    print("✅ Encryption key generated!")
+    print("✅ Encryption key created!")
 
 def load_key():
-    """Load or create encryption key"""
+    """Loads existing encryption key or creates a new one"""
     if not os.path.exists(KEY_FILE):
         generate_key()
     with open(KEY_FILE, "rb") as f:
         return f.read()
 
 def encrypt_password(password, key):
-    """Encrypt a password"""
+    """Encrypts a password so it's safe to store"""
     return Fernet(key).encrypt(password.encode()).decode()
 
 def decrypt_password(encrypted_password, key):
-    """Decrypt a password"""
+    """Decrypts a password when you need to see it"""
     try:
         return Fernet(key).decrypt(encrypted_password.encode()).decode()
     except:
         return "[DECRYPTION FAILED]"
 
 def setup_master_password():
-    """First-time setup for master password"""
+    """First-time setup - create your master password"""
     print_header("FIRST TIME SETUP")
     print("Welcome to Password Manager!")
-    print("You need to create a master password to secure your vault.\n")
+    print("This master password unlocks ALL your saved passwords.")
+    print("Don't forget it - there's no 'reset' button!\n")
     
     while True:
         password = getpass("🔑 Create master password: ")
@@ -73,16 +74,18 @@ def setup_master_password():
                 print("⚠️  Password cannot be empty.\n")
                 continue
             
+            # Save the hashed version (never store real password!)
             with open(MASTER_FILE, "w") as f:
                 f.write(hash_password(password))
             print("\n✅ Master password set successfully!")
-            time.sleep(1.5)
+            print("💡 Tip: Store it somewhere safe!")
+            time.sleep(2)
             break
         else:
-            print("❌ Passwords do not match. Try again.\n")
+            print("❌ Passwords don't match. Try again.\n")
 
 def verify_master_password():
-    """Verify master password with attempt limit"""
+    """Ask for master password and verify it (3 attempts only!)"""
     if not os.path.exists(MASTER_FILE):
         setup_master_password()
         return True
@@ -97,7 +100,7 @@ def verify_master_password():
         password = getpass("Enter master password: ")
         
         if hash_password(password) == stored_hash:
-            print("\n✅ Access granted!")
+            print("\n✅ Access granted! Welcome back!")
             time.sleep(0.5)
             return True
         else:
@@ -105,14 +108,14 @@ def verify_master_password():
             if remaining > 0:
                 print(f"❌ Wrong password. {remaining} attempt(s) remaining.\n")
             else:
-                print("\n🔒 Too many failed attempts. Exiting.")
+                print("\n🔒 Too many failed attempts. Exiting for security.")
                 time.sleep(1)
                 return False
     
     return False
 
 def load_data():
-    """Load password data from file"""
+    """Load all saved passwords from JSON file"""
     if not os.path.exists(DATA_FILE):
         return []
     
@@ -127,7 +130,7 @@ def load_data():
         return []
 
 def save_data(data):
-    """Save password data to file"""
+    """Save passwords to JSON file"""
     try:
         with open(DATA_FILE, "w") as f:
             json.dump(data, f, indent=4)
@@ -137,12 +140,12 @@ def save_data(data):
         return False
 
 def generate_password(length=12, use_special=True):
-    """Generate a random strong password"""
+    """Generate a strong random password - perfect for new accounts!"""
     chars = string.ascii_letters + string.digits
     if use_special:
         chars += "!@#$%^&*"
     
-    # Ensure at least one of each type
+    # Make sure we have at least one of each type
     password = [
         random.choice(string.ascii_lowercase),
         random.choice(string.ascii_uppercase),
@@ -156,15 +159,16 @@ def generate_password(length=12, use_special=True):
     for _ in range(length - len(password)):
         password.append(random.choice(chars))
     
-    # Shuffle to avoid predictable pattern
+    # Shuffle to avoid predictable patterns
     random.shuffle(password)
     return ''.join(password)
 
 def check_password_strength(password):
-    """Check password strength and return feedback"""
+    """Check how strong a password is and give tips to improve it"""
     strength = 0
     feedback = []
     
+    # Check length
     if len(password) >= 12:
         strength += 1
     elif len(password) >= 8:
@@ -172,16 +176,19 @@ def check_password_strength(password):
     else:
         feedback.append("❌ Too short (min 8 characters)")
     
+    # Check for mixed case
     if any(c.islower() for c in password) and any(c.isupper() for c in password):
         strength += 1
     else:
         feedback.append("⚠️  Add both uppercase and lowercase letters")
     
+    # Check for numbers
     if any(c.isdigit() for c in password):
         strength += 1
     else:
         feedback.append("⚠️  Add numbers")
     
+    # Check for special characters
     if any(c in "!@#$%^&*" for c in password):
         strength += 1
     else:
@@ -194,20 +201,11 @@ def check_password_strength(password):
     else:
         return "⚠️  Weak", feedback
 
-def get_password_strength_indicator(strength):
-    """Return visual indicator for password strength"""
-    if strength == "Strong!":
-        return "🟢🟢🟢🟢🟢"
-    elif strength == "Medium":
-        return "🟡🟡🟡⚪⚪"
-    else:
-        return "🔴🔴⚪⚪⚪"
-
 def add_password(data, key):
-    """Add a new password entry"""
+    """Add a new password to your vault"""
     print_header("ADD NEW PASSWORD")
     
-    site = input("🌐 Website/Service: ").strip()
+    site = input("🌐 Website/Service (e.g., Google, GitHub): ").strip()
     if not site:
         print("❌ Website name required.")
         input("\nPress Enter to continue...")
@@ -219,23 +217,23 @@ def add_password(data, key):
         input("\nPress Enter to continue...")
         return
     
-    # Check for duplicates
+    # Check for duplicates to avoid confusion
     for entry in data:
         if entry["site"].lower() == site.lower() and entry["username"].lower() == username.lower():
-            print("⚠️  Entry already exists for this site and username!")
+            print("⚠️  You already saved a password for this site and username!")
             input("\nPress Enter to continue...")
             return
     
-    print("\n--- Password Options ---")
-    print("1. Generate random strong password")
-    print("2. Enter my own password")
-    print("3. Cancel")
+    print("\n--- How do you want to create the password? ---")
+    print("1. 🔄 Generate a random strong password (recommended)")
+    print("2. ✏️  Type my own password")
+    print("3. ❌ Cancel")
     
     choice = input("\nChoose (1-3): ").strip()
     
     if choice == "1":
-        # Generate password with options
-        length = input("Password length (default 16): ").strip()
+        # Generate random password
+        length = input("Password length (default 16, more = stronger): ").strip()
         length = int(length) if length.isdigit() and int(length) >= 8 else 16
         
         use_special = input("Include special characters? (y/n, default y): ").lower()
@@ -246,7 +244,6 @@ def add_password(data, key):
         
         print(f"\n🔑 Generated password: {password}")
         print(f"📊 Strength: {strength_text}")
-        print(get_password_strength_indicator(strength_text))
         
         confirm = input("\nSave this password? (y/n): ").lower()
         if confirm != "y":
@@ -263,10 +260,9 @@ def add_password(data, key):
         
         strength_text, feedback = check_password_strength(password)
         print(f"\n📊 Strength: {strength_text}")
-        print(get_password_strength_indicator(strength_text))
         
         if feedback:
-            print("\n💡 Tips to improve:")
+            print("\n💡 Tips to make it stronger:")
             for tip in feedback:
                 print(f"   {tip}")
         
@@ -280,12 +276,13 @@ def add_password(data, key):
         input("\nPress Enter to continue...")
         return
     
-    # Add notes field
-    notes = input("\n📝 Notes (optional, press Enter to skip): ").strip()
+    # Optional notes field
+    notes = input("\n📝 Notes (optional - e.g., 'used for school account'): ").strip()
     
-    # Create timestamp
+    # Add timestamp for tracking
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
+    # Encrypt before storing
     encrypted = encrypt_password(password, key)
     
     data.append({
@@ -303,15 +300,16 @@ def add_password(data, key):
     input("\nPress Enter to continue...")
 
 def view_passwords(data, key):
-    """View all saved passwords"""
+    """Show all your saved passwords"""
     print_header("ALL PASSWORDS")
     
     if not data:
-        print("📭 No passwords saved yet.")
+        print("📭 No passwords saved yet. Add some first!")
         input("\nPress Enter to continue...")
         return
     
-    show_passwords = input("🔓 Show passwords? (y/n, default n): ").lower() == 'y'
+    # Ask if user wants to see actual passwords (privacy)
+    show_passwords = input("🔓 Show actual passwords? (y/n, default n): ").lower() == 'y'
     
     for i, entry in enumerate(data, start=1):
         print(f"\n{'─' * 40}")
@@ -322,33 +320,32 @@ def view_passwords(data, key):
             decrypted = decrypt_password(entry["password"], key)
             print(f"   🔑 Password: {decrypted}")
             
-            # Show password strength for decrypted password
+            # Show strength if we can read it
             if "[DECRYPTION FAILED]" not in decrypted:
                 strength, _ = check_password_strength(decrypted)
                 print(f"   📊 Strength: {strength}")
         else:
-            print(f"   🔑 Password: {'*' * 12}")
+            print(f"   🔑 Password: {'*' * 12} (hidden)")
         
         if entry.get("notes"):
             print(f"   📝 Notes: {entry['notes'][:50]}")
         
-        print(f"   📅 Added: {entry.get('created', 'Unknown')}")
-        print(f"   🔄 Updated: {entry.get('updated', 'Unknown')}")
+        print(f"   📅 Last updated: {entry.get('updated', 'Unknown')}")
     
     print(f"\n{'─' * 40}")
     print(f"📊 Total: {len(data)} password(s)")
 
 def search_password(data, key):
-    """Search for passwords"""
+    """Quickly find a specific password"""
     print_header("SEARCH")
     
-    keyword = input("🔍 Enter site name or username: ").lower().strip()
+    keyword = input("🔍 Enter website name or username: ").lower().strip()
     if not keyword:
         print("❌ No search term provided.")
         input("\nPress Enter to continue...")
         return
     
-    # Search in site name and username
+    # Search in both site name and username
     results = []
     for entry in data:
         if keyword in entry['site'].lower() or keyword in entry['username'].lower():
@@ -377,7 +374,7 @@ def search_password(data, key):
     input("\nPress Enter to continue...")
 
 def update_password(data, key):
-    """Update an existing password entry"""
+    """Edit an existing password entry"""
     print_header("UPDATE PASSWORD")
     
     if not data:
@@ -385,16 +382,17 @@ def update_password(data, key):
         input("\nPress Enter to continue...")
         return
     
+    # Show all entries with numbers
     for i, entry in enumerate(data, start=1):
         print(f"[{i}] {entry['site']} - {entry['username']}")
     
     try:
-        choice = int(input("\n📌 Select entry number: "))
+        choice = int(input("\n📌 Select entry number to update: "))
         if 1 <= choice <= len(data):
             entry = data[choice - 1]
             
             print(f"\nUpdating: {entry['site']} ({entry['username']})")
-            print("(Press Enter to keep current value)\n")
+            print("💡 Press Enter to keep current value\n")
             
             # Update username
             new_username = input(f"👤 New username [current: {entry['username']}]: ").strip()
@@ -404,8 +402,8 @@ def update_password(data, key):
             # Update password
             update_pw = input("🔑 Update password? (y/n): ").lower()
             if update_pw == 'y':
-                print("\n1. Generate random password")
-                print("2. Enter manually")
+                print("\n1. 🔄 Generate random password")
+                print("2. ✏️  Enter manually")
                 pw_choice = input("\nChoose (1/2): ").strip()
                 
                 if pw_choice == "1":
@@ -441,7 +439,7 @@ def update_password(data, key):
     input("\nPress Enter to continue...")
 
 def delete_password(data):
-    """Delete a password entry"""
+    """Remove a password from your vault"""
     print_header("DELETE PASSWORD")
     
     if not data:
@@ -456,7 +454,7 @@ def delete_password(data):
         choice = int(input("\n📌 Enter number to delete: "))
         if 1 <= choice <= len(data):
             entry = data[choice - 1]
-            print(f"\n⚠️  WARNING: You are about to delete '{entry['site']}'")
+            print(f"\n⚠️  WARNING: You're about to delete '{entry['site']}'")
             confirm = input(f"Type 'DELETE' to confirm: ").strip()
             
             if confirm == "DELETE":
@@ -464,7 +462,7 @@ def delete_password(data):
                 if save_data(data):
                     print(f"\n✅ Deleted '{removed['site']}'")
             else:
-                print("\n❌ Cancelled.")
+                print("\n❌ Cancelled - nothing was deleted")
         else:
             print("❌ Invalid choice.")
     except ValueError:
@@ -472,8 +470,8 @@ def delete_password(data):
     
     input("\nPress Enter to continue...")
 
-def export_backup(data, key, format_type="txt"):
-    """Export passwords to backup file"""
+def export_backup(data, key):
+    """Create a backup of all your passwords"""
     print_header("EXPORT BACKUP")
     
     if not data:
@@ -481,17 +479,17 @@ def export_backup(data, key, format_type="txt"):
         input("\nPress Enter to continue...")
         return
     
-    print("Export formats:")
-    print("1. TXT (human readable)")
-    print("2. CSV (spreadsheet compatible)")
-    print("3. JSON (raw data)")
+    print("Choose export format:")
+    print("1. 📄 TXT (easy to read)")
+    print("2. 📊 CSV (for Excel/Google Sheets)")
+    print("3. 🔧 JSON (raw format)")
     
     choice = input("\nChoose format (1-3): ").strip()
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     if choice == "1":
-        filename = f"backup_{timestamp}.txt"
+        filename = f"password_backup_{timestamp}.txt"
         try:
             with open(filename, "w") as f:
                 f.write("PASSWORD MANAGER BACKUP\n")
@@ -508,11 +506,12 @@ def export_backup(data, key, format_type="txt"):
                     f.write("-"*40 + "\n\n")
             
             print(f"\n✅ Backup saved to {filename}")
+            print("💡 Move this file somewhere safe!")
         except IOError:
             print("❌ Failed to create backup.")
     
     elif choice == "2":
-        filename = f"backup_{timestamp}.csv"
+        filename = f"password_backup_{timestamp}.csv"
         try:
             import csv
             with open(filename, "w", newline='', encoding='utf-8') as f:
@@ -533,9 +532,9 @@ def export_backup(data, key, format_type="txt"):
             print(f"❌ Export failed: {e}")
     
     elif choice == "3":
-        filename = f"backup_{timestamp}.json"
+        filename = f"password_backup_{timestamp}.json"
         try:
-            # Create a decrypted copy for backup
+            # Create a readable copy for backup
             backup_data = []
             for entry in data:
                 entry_copy = entry.copy()
@@ -545,7 +544,8 @@ def export_backup(data, key, format_type="txt"):
             with open(filename, "w") as f:
                 json.dump(backup_data, f, indent=2)
             print(f"\n✅ Backup saved to {filename}")
-            print("⚠️  WARNING: This backup contains plaintext passwords!")
+            print("⚠️  WARNING: This backup has UNENCRYPTED passwords!")
+            print("    Keep it in a secure place!")
         except IOError:
             print("❌ Failed to create backup.")
     else:
@@ -554,10 +554,10 @@ def export_backup(data, key, format_type="txt"):
     input("\nPress Enter to continue...")
 
 def import_backup(data, key):
-    """Import passwords from backup file"""
+    """Import passwords from a backup file"""
     print_header("IMPORT BACKUP")
     
-    print("Supported formats: .txt, .csv, .json")
+    print("Supported formats: .json or .csv")
     filename = input("📁 Enter backup filename: ").strip()
     
     if not filename:
@@ -578,7 +578,7 @@ def import_backup(data, key):
                 imported_data = json.load(f)
             
             for item in imported_data:
-                # Check if already exists
+                # Skip if already exists
                 exists = any(
                     e['site'].lower() == item['site'].lower() and 
                     e['username'].lower() == item['username'].lower() 
@@ -628,7 +628,7 @@ def import_backup(data, key):
         if imported_count > 0 and save_data(data):
             print(f"\n✅ Successfully imported {imported_count} new entry(s)!")
         else:
-            print("\n📭 No new entries were imported (duplicates or empty).")
+            print("\n📭 No new entries were imported (duplicates or empty)")
     
     except Exception as e:
         print(f"❌ Import failed: {e}")
@@ -636,7 +636,7 @@ def import_backup(data, key):
     input("\nPress Enter to continue...")
 
 def view_stats(data, key):
-    """Display statistics about stored passwords"""
+    """Show statistics about your password collection"""
     print_header("STATISTICS")
     
     if not data:
@@ -647,6 +647,7 @@ def view_stats(data, key):
     total = len(data)
     weak = medium = strong = 0
     
+    # Analyze password strength
     for entry in data:
         decrypted = decrypt_password(entry["password"], key)
         if "[DECRYPTION FAILED]" not in decrypted:
@@ -658,19 +659,19 @@ def view_stats(data, key):
             else:
                 weak += 1
     
-    # Get unique sites
+    # Count unique websites
     sites = set(entry['site'].lower() for entry in data)
     
-    print(f"📊 Overall Statistics")
-    print(f"{'─' * 30}")
+    print(f"📊 Your Password Vault Statistics")
+    print(f"{'─' * 35}")
     print(f"🔐 Total passwords: {total}")
     print(f"🌐 Unique websites: {len(sites)}")
-    print(f"\n📈 Password Strength:")
+    print(f"\n📈 Password Strength Breakdown:")
     print(f"   🟢 Strong:  {strong} ({strong/total*100:.1f}%)")
     print(f"   🟡 Medium: {medium} ({medium/total*100:.1f}%)")
     print(f"   🔴 Weak:   {weak} ({weak/total*100:.1f}%)")
     
-    # Most recent passwords
+    # Show recently added
     print(f"\n🕒 Recently added (last 5):")
     sorted_data = sorted(data, key=lambda x: x.get('created', ''), reverse=True)
     for entry in sorted_data[:5]:
@@ -679,15 +680,15 @@ def view_stats(data, key):
     input("\nPress Enter to continue...")
 
 def change_master_password():
-    """Change the master password"""
+    """Change your master password (you'll need to remember the new one!)"""
     print_header("CHANGE MASTER PASSWORD")
     
-    # Verify current password
     if not os.path.exists(MASTER_FILE):
         print("❌ No master password set.")
         input("\nPress Enter to continue...")
         return False
     
+    # Verify current password first
     with open(MASTER_FILE, "r") as f:
         stored_hash = f.read()
     
@@ -697,7 +698,7 @@ def change_master_password():
         input("\nPress Enter to continue...")
         return False
     
-    print("\nSet new master password:")
+    print("\nSet your new master password:")
     while True:
         new_pass = getpass("🔑 New master password: ")
         confirm = getpass("🔑 Confirm new password: ")
@@ -713,19 +714,23 @@ def change_master_password():
             with open(MASTER_FILE, "w") as f:
                 f.write(hash_password(new_pass))
             print("\n✅ Master password changed successfully!")
+            print("💡 Don't forget your new password!")
             input("\nPress Enter to continue...")
             return True
         else:
-            print("❌ Passwords do not match.\n")
+            print("❌ Passwords don't match.\n")
 
 def main():
-    """Main program loop"""
+    """Main program - where everything starts"""
+    # Verify user is authorized
     if not verify_master_password():
         sys.exit(1)
     
+    # Load encryption key and existing data
     key = load_key()
     data = load_data()
     
+    # Main menu loop
     while True:
         print_header("MAIN MENU")
         print("1. 🔐 Add New Password")
@@ -764,16 +769,18 @@ def main():
             print_header("GOODBYE")
             print("Thanks for using Password Manager!")
             print("Remember: Keep your master password safe! 🔒")
-            time.sleep(1.5)
+            print("GitHub: https://github.com/yourusername/password-manager")
+            time.sleep(2)
             clear_screen()
             break
         else:
             print("❌ Invalid option. Please choose 1-10.")
             time.sleep(1)
 
+# Run the program
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n👋 Goodbye!")
+        print("\n\n👋 Goodbye! Stay safe online!")
         sys.exit(0)
