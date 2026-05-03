@@ -56,7 +56,7 @@ def setup_master():
             print("\n✅ Done!")
             input("\nPress Enter...")
             return True
-        print("Try again.\n")
+        print("Passwords don't match or too short.\n")
 
 def login():
     if not os.path.exists(MASTER_FILE):
@@ -80,7 +80,8 @@ def load_data():
         return []
     try:
         with open(DATA_FILE, "r") as f:
-            return json.load(f) if f.read().strip() else []
+            content = f.read()
+            return json.loads(content) if content else []
     except:
         return []
 
@@ -116,11 +117,7 @@ def check_strength(pw):
     if any(c in "!@#$%^&*" for c in pw):
         score += 1
     
-    if score == 4:
-        return "Strong"
-    elif score == 3:
-        return "Medium"
-    return "Weak"
+    return "Strong" if score == 4 else "Medium" if score == 3 else "Weak"
 
 def add(data, key):
     header("ADD")
@@ -133,7 +130,6 @@ def add(data, key):
     if not username:
         return
     
-    # Check for duplicate
     for entry in data:
         if entry['site'].lower() == site.lower() and entry['username'].lower() == username.lower():
             print("Already exists!")
@@ -243,6 +239,11 @@ def update(data, key):
     
     try:
         choice = int(input("\nNumber to update: "))
+        if choice < 1 or choice > len(data):
+            print("Invalid number.")
+            input("\nPress Enter...")
+            return
+            
         entry = data[choice-1]
         
         print(f"\nEditing: {entry['site']}")
@@ -255,14 +256,15 @@ def update(data, key):
         if input("Update password? (y/n): ").lower() == 'y':
             print("\n1. Generate new")
             print("2. Type new")
-            if input("Choose (1/2): ") == "1":
+            pw_choice = input("Choose (1/2): ")
+            if pw_choice == "1":
                 length = input("Length (14): ").strip()
                 length = int(length) if length.isdigit() else 14
                 new_pw = gen_password(length)
                 print(f"New: {new_pw}")
                 if input("Save? (y/n): ").lower() == 'y':
                     entry['password'] = encrypt(new_pw, key)
-            else:
+            elif pw_choice == "2":
                 new_pw = getpass("New password: ")
                 if new_pw:
                     entry['password'] = encrypt(new_pw, key)
@@ -275,8 +277,8 @@ def update(data, key):
         
         if save_data(data):
             print("\n✅ Updated!")
-    except:
-        print("Invalid choice.")
+    except ValueError:
+        print("Enter a number.")
     
     input("\nPress Enter...")
 
@@ -293,6 +295,11 @@ def delete(data):
     
     try:
         choice = int(input("\nNumber to delete: "))
+        if choice < 1 or choice > len(data):
+            print("Invalid number.")
+            input("\nPress Enter...")
+            return
+            
         entry = data[choice-1]
         
         confirm = input(f"Delete '{entry['site']}'? Type 'yes': ")
@@ -302,8 +309,8 @@ def delete(data):
                 print("\n✅ Deleted!")
         else:
             print("Cancelled.")
-    except:
-        print("Invalid choice.")
+    except ValueError:
+        print("Enter a number.")
     
     input("\nPress Enter...")
 
@@ -381,6 +388,9 @@ def stats(data, key):
     print(f"  Strong: {strong}")
     print(f"  Medium: {medium}")
     print(f"  Weak: {weak}")
+    
+    if weak > 0:
+        print(f"\n⚠️  {weak} weak password(s) - consider updating them")
     
     input("\nPress Enter...")
 
