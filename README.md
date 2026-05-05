@@ -1,19 +1,19 @@
-# 🔐 Smart Password Manager (CLI)
+# Password Manager
 
-A simple command-line password manager built with Python.
+A simple command-line password manager that securely stores your login credentials.
 
-I built this project while learning Python to practice file handling and create something actually useful (instead of just small exercises).
+## Features
 
----
-
-## 🚀 Features
-
-* 🔐 Master password login
-* ➕ Add new passwords
-* 📂 View saved passwords
-* 🔍 Search passwords by website
-* 🗑️ Delete saved passwords
-
+- Secure encryption using Fernet (cryptography library)
+- Master password protection
+- Generate strong random passwords
+- Add, view, update, and delete entries
+- Search through stored passwords
+- Organize passwords by categories
+- Export data to TXT or CSV
+- Password strength checking
+- Statistics dashboard
+- Auto-backup before saving
 ---
 
 ## 🧰 Technologies Used
